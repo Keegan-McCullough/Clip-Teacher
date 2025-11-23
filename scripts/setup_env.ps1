@@ -63,6 +63,7 @@ $reqs = Get-Content requirements.txt | Where-Object { $_ -and ($_ -notmatch '^(t
 $tmp = [System.IO.Path]::Combine($env:TEMP, "clip_teacher_reqs_no_torch.txt")
 $reqs | Out-File -Encoding utf8 $tmp
 pip install -r $tmp
+pip install python-dotenv
 Remove-Item $tmp -ErrorAction SilentlyContinue
 
 Write-Host "All Python packages installed."

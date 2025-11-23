@@ -2,11 +2,18 @@ import os
 import time
 import shutil
 import argparse
-from moviepy.editor import VideoFileClip, AudioFileClip, vfx
 
+# --- MOVIEPY 2.0 COMPATIBLE IMPORTS ---
+# 'moviepy.editor' was removed in v2.0. We import directly from 'moviepy'.
+from moviepy import VideoFileClip, AudioFileClip
+
+# Import your custom modules
 from generate_content import generate_content
 from generate_audio import create_audio
 from generate_video import create_video_clip
+
+from dotenv import load_dotenv
+load_dotenv()
 
 OUTPUT_DIR = "outputs"
 
@@ -32,23 +39,39 @@ def compose_final(video_path, audio_path):
     """Loops the short video clip to match audio duration."""
     print("[Compose] Merging Audio and Video...")
     
-    audio = AudioFileClip(audio_path)
-    video = VideoFileClip(video_path)
-    
-    # Speed Hack: Loop the generated video clip to match audio duration
-    # This saves us from having to generate 100+ frames of AI video
-    final_clip = video.fx(vfx.loop, duration=audio.duration)
-    final_clip = final_clip.set_audio(audio)
-    
-    final_output = os.path.join(OUTPUT_DIR, "final_video.mp4")
-    final_clip.write_videofile(final_output, fps=24, codec="libx264", audio_codec="aac")
-    
-    # Close handles to allow cleanup
-    video.close()
-    audio.close()
-    final_clip.close()
-    
-    return final_output
+    try:
+        # 1. Load the clips
+        audio = AudioFileClip(audio_path)
+        video = VideoFileClip(video_path)
+        
+        # 2. Adjust Video Length (MoviePy 2.0 Syntax)
+        # Use .looped() instead of .fx(vfx.loop)
+        final_clip = video.looped(duration=audio.duration)
+        
+        # 3. Add Audio (MoviePy 2.0 Syntax)
+        # Use .with_audio() instead of .set_audio()
+        final_clip = final_clip.with_audio(audio)
+        
+        # 4. Save Final File
+        final_output = os.path.join(OUTPUT_DIR, "final_video.mp4")
+        final_clip.write_videofile(
+            final_output, 
+            fps=24, 
+            codec="libx264", 
+            audio_codec="aac",
+            logger=None # Hides the noisy progress bar
+        )
+        
+        # Close handles to release files
+        video.close()
+        audio.close()
+        final_clip.close()
+        
+        return final_output
+        
+    except Exception as e:
+        print(f"[Compose] Error during joining: {e}")
+        return None
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -63,16 +86,20 @@ if __name__ == "__main__":
     # 2. Content Generation
     script_text, visual_prompt = generate_content(user_topic)
     
-    # 3. Parallel Generation (Conceptual, done sequentially here for simplicity)
+    # 3. Parallel Generation
     audio_path = create_audio(script_text)
     video_path = create_video_clip(visual_prompt)
     
-    # 4. Composition
+    # 4. Composition (Join Clips)
     if video_path and audio_path:
         final_video = compose_final(video_path, audio_path)
         if final_video:
             print(f"\n✅ SUCCESS! Video saved to: {final_video}")
-            os.startfile(final_video) # Windows: Attempts to open the video automatically
+            # Try to open the video automatically (Windows only)
+            try:
+                os.startfile(final_video)
+            except AttributeError:
+                pass 
     else:
         print("\n[Error] Could not join clips because one failed to generate.")
     

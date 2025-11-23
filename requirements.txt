@@ -1,12 +1,22 @@
+# Core AI & Logic
 transformers>=4.30.0
-diffusers>=0.24.0
 accelerate>=0.21.0
-torch>=2.0.0
-numpy
+torch>=2.6.0
+torchaudio>=2.6.0
 sentencepiece
+numpy
+python-dotenv
+
+# Audio Generation (SpeechT5)
 datasets
 soundfile
-moviepy>=1.0.3
-scipy
+
+# Video & Cloud API
+replicate
+requests
+
+# Video Editing (MoviePy 2.0+)
+moviepy>=2.0.0
+imageio
 # Optional: For faster video processing
 opencv-python
