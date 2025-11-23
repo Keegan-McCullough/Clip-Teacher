@@ -65,12 +65,16 @@ if __name__ == "__main__":
     
     # 3. Parallel Generation (Conceptual, done sequentially here for simplicity)
     audio_path = create_audio(script_text)
-    video_clip_path = create_video_clip(visual_prompt)
+    video_path = create_video_clip(visual_prompt)
     
     # 4. Composition
-    final_video = compose_final(video_clip_path, audio_path)
-    
-    print(f"\n✅ SUCCESS! Video saved to: {final_video}")
+    if video_path and audio_path:
+        final_video = compose_final(video_path, audio_path)
+        if final_video:
+            print(f"\n✅ SUCCESS! Video saved to: {final_video}")
+            os.startfile(final_video) # Windows: Attempts to open the video automatically
+    else:
+        print("\n[Error] Could not join clips because one failed to generate.")
     
     # 5. Storage Management
     if args.clean:
