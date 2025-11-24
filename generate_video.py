@@ -1,72 +1,58 @@
-import replicate
-import requests
+from gradio_client import Client
 import time
 import os
+import shutil
 import numpy as np
-
-# --- OPTIONAL: PASTE KEY HERE IF TERMINAL FAILS ---
-# os.environ["REPLICATE_API_TOKEN"] = "r8_..."
 
 def create_video_clip(prompt, output_path="outputs/raw_clip.mp4"):
     t0 = time.perf_counter()
     os.makedirs("outputs", exist_ok=True)
     
-    print(f"[Video] Sending request to Minimax Video-01...")
+    print(f"[Video] Connecting to Hugging Face (Zeroscope)...")
+    print(f"        Prompt: '{prompt}'")
+    print("        (This is free but uses a public queue. Please wait...)")
     
     try:
-        # Check for key before running
-        if not os.environ.get("REPLICATE_API_TOKEN"):
-            raise ValueError("Replicate API Token is missing!")
-
-        # 1. RUN THE MODEL
-        # Minimax Video-01 generates ~6 seconds at 1280x720
-        output = replicate.run(
-            "minimax/video-01",
-            input={
-                "prompt": prompt,
-                "prompt_optimizer": True
-            }
+        # 1. Connect to a working Space
+        # 'fffiloni/zeroscope' is a popular, reliable alternative
+        client = Client("fffiloni/zeroscope")
+        
+        # 2. Send Request
+        # Zeroscope takes the prompt and a "model_choice" (use "576w" for speed)
+        result = client.predict(
+            prompt,  # str  in 'Prompt' Textbox component
+            "576w",  # str  in 'Model Selection' Radio component
+            api_name="/predict"
         )
         
-        # 2. SAVE THE FILE
-        # Handle 'FileOutput' object or URL string
-        print(f"[Video] Downloading content...")
+        # 3. Handle Result (It returns a video path)
+        # The result is a temporary file path on your machine
+        temp_video_path = result[0] if isinstance(result, (list, tuple)) else result
         
-        # If output is a list (rare for this model), take first item
-        if isinstance(output, list):
-            output = output[0]
-            
-        # Write to file
-        with open(output_path, "wb") as file:
-            # If it's a file object, read it. If it's a URL, download it.
-            if hasattr(output, "read"):
-                file.write(output.read())
-            else:
-                resp = requests.get(str(output))
-                file.write(resp.content)
+        # Move it to your output folder
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        shutil.move(temp_video_path, output_path)
             
         print(f"[Video] Saved to {output_path} in {time.perf_counter() - t0:.1f}s")
         return output_path
 
     except Exception as e:
-        print(f"\n[ERROR] Replicate failed: {e}")
-        print("[Video] Switching to fallback (Black Screen)...")
+        print(f"\n[ERROR] Hugging Face generation failed: {e}")
+        print("[Video] Switching to fallback black screen...")
         return _create_fallback_video(output_path)
 
 def _create_fallback_video(output_path):
-    """
-    Creates a simple black screen video without relying on 'ColorClip',
-    which can be buggy in MoviePy 2.0.
-    """
-    from moviepy import ImageClip
+    """Creates a simple black screen video if the API fails."""
+    # FIX: Correct imports for MoviePy 2.0
+    from moviepy.video.VideoClip import ImageClip
     
-    # Create a black image using numpy (1280x720)
-    # This is 100% robust and works on all versions
-    black_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    # Create a black frame (576x320 to match Zeroscope)
+    black_frame = np.zeros((320, 576, 3), dtype=np.uint8)
     
     # Create clip
     clip = ImageClip(black_frame)
-    clip = clip.with_duration(6).with_fps(24) # MoviePy 2.0 syntax
+    clip = clip.with_duration(3).with_fps(24)
     
     clip.write_videofile(output_path, codec="libx264", logger=None)
     return output_path

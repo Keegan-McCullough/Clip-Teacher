@@ -5,7 +5,7 @@ import argparse
 
 # --- MOVIEPY 2.0 COMPATIBLE IMPORTS ---
 # 'moviepy.editor' was removed in v2.0. We import directly from 'moviepy'.
-from moviepy import VideoFileClip, AudioFileClip
+from moviepy.editor import VideoFileClip, AudioFileClip, vfx
 
 # Import your custom modules
 from generate_content import generate_content
@@ -44,13 +44,8 @@ def compose_final(video_path, audio_path):
         audio = AudioFileClip(audio_path)
         video = VideoFileClip(video_path)
         
-        # 2. Adjust Video Length (MoviePy 2.0 Syntax)
-        # Use .looped() instead of .fx(vfx.loop)
-        final_clip = video.looped(duration=audio.duration)
-        
-        # 3. Add Audio (MoviePy 2.0 Syntax)
-        # Use .with_audio() instead of .set_audio()
-        final_clip = final_clip.with_audio(audio)
+        final_clip = video.fx(vfx.loop, duration=audio.duration)
+        final_clip = final_clip.set_audio(audio)
         
         # 4. Save Final File
         final_output = os.path.join(OUTPUT_DIR, "final_video.mp4")

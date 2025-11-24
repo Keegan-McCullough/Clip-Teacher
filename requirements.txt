@@ -15,8 +15,10 @@ soundfile
 replicate
 requests
 
-# Video Editing (MoviePy 2.0+)
-moviepy>=2.0.0
+# Video Editing (MoviePy 1.0+)
+moviepy>=1.0.0
 imageio
+# new model hosting
+gradio_client
 # Optional: For faster video processing
 opencv-python
